@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Entraînement Math Sup</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Image d’en‑tête avec un motif mathématique abstrait -->
+  <header class="hero">
+    <div class="hero-overlay">
+      <h1>Entraînement Math Sup</h1>
+      <p>Révisez toutes les propriétés, propositions et définitions du cours de maths.</p>
+    </div>
+  </header>
+
+  <main>
+    <section class="selection">
+      <h2>Paramètres de l’exercice</h2>
+      <form id="exercise-form">
+        <div class="form-group">
+          <label for="subject">Sujet&nbsp;:</label>
+          <select id="subject" name="subject">
+            <option value="logique">Logique &amp; Ensembles</option>
+            <option value="analyse">Analyse</option>
+            <option value="algebre">Algèbre</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="difficulty">Difficulté&nbsp;:</label>
+          <select id="difficulty" name="difficulty">
+            <option value="1">Facile</option>
+            <option value="2">Moyenne</option>
+            <option value="3">Difficile</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="time">Durée&nbsp;(minutes)&nbsp;:</label>
+          <select id="time" name="time">
+            <option value="5">5 minutes</option>
+            <option value="10">10 minutes</option>
+            <option value="15">15 minutes</option>
+          </select>
+        </div>
+        <button type="submit" class="btn">Démarrer l’exercice</button>
+      </form>
+    </section>
+  </main>
+
+  <footer>
+    <p>&copy;&nbsp;2025 Entraînement Math Sup. Tous droits réservés.</p>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
