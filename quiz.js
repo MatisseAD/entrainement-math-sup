@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const subject = params.get('subject') || 'logique';
   const difficulty = parseInt(params.get('difficulty'), 10) || 1;
   const timeMinutes = parseInt(params.get('time'), 10) || 5;
+  const mode = params.get('mode') || 'qcme';
 
   // Filtrer les questions selon le sujet et le niveau de difficulté
   let quizQuestions = QUESTIONS.filter(q => q.subject === subject && q.difficulty <= difficulty);
@@ -14,7 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
     quizQuestions = QUESTIONS.filter(q => q.subject === subject);
   }
 
-  // Mélange des questions
+  // Mélange des questions (copie de tableau pour éviter la mutation)
   function shuffle(array) {
     const arr = array.slice();
     for (let i = arr.length - 1; i > 0; i--) {
@@ -30,23 +31,48 @@ document.addEventListener('DOMContentLoaded', () => {
   let timeLeft = timeMinutes * 60; // en secondes
   const container = document.getElementById('quiz-container');
   const timerEl = document.getElementById('timer');
+  // Stockage des résultats pour l’auto‑correction
+  const results = [];
 
   // Met à jour l’affichage du chronomètre
   function updateTimer() {
     const minutes = Math.floor(timeLeft / 60);
     const seconds = timeLeft % 60;
-    timerEl.textContent = `Temps restant : ${minutes.toString().padStart(2, '0')}\u00a0:\u00a0${seconds.toString().padStart(2, '0')}`;
+    timerEl.textContent = `Temps restant : ${minutes.toString().padStart(2, '0')}\u00a0: ${seconds.toString().padStart(2, '0')}`;
   }
 
-  // Terminer le quiz et afficher le score
+  // Terminer le quiz et afficher le score et la correction
   function finishQuiz() {
     clearInterval(timerInterval);
     // Nettoie le conteneur et affiche le résultat
     container.innerHTML = '';
     const resultDiv = document.createElement('div');
     resultDiv.className = 'result';
-    resultDiv.innerHTML = `<h2>Résultat</h2><p>Vous avez obtenu <strong>${score}</strong> bonne${score > 1 ? 's' : ''} réponse${score > 1 ? 's' : ''} sur ${quizQuestions.length}.</p>`;
+    // Résumé du score uniquement en mode QCM
+    let summary = '';
+    if (mode === 'qcme') {
+      summary = `<p>Vous avez obtenu <strong>${score}</strong> bonne${score > 1 ? 's' : ''} réponse${score > 1 ? 's' : ''} sur ${quizQuestions.length}.</p>`;
+    } else {
+      summary = `<p>Exercice terminé. Consultez les corrigés ci‑dessous.</p>`;
+    }
+    resultDiv.innerHTML = `<h2>Résultat</h2>${summary}`;
     container.appendChild(resultDiv);
+    // Affichage détaillé de chaque question avec la correction
+    results.forEach((res, idx) => {
+      const block = document.createElement('div');
+      block.className = 'correction-block';
+      const correctness = res.isCorrect ? '✅' : '❌';
+      const qNum = idx + 1;
+      const userAnswer = res.selected ? res.selected : '<em>—</em>';
+      block.innerHTML = `
+        <h3>Question ${qNum}</h3>
+        <p>${res.question}</p>
+        <p>Votre réponse : <strong>${userAnswer}</strong> ${mode === 'qcme' ? correctness : ''}</p>
+        <p>Bonne réponse : <strong>${res.correct}</strong></p>
+        <p class="explication">${res.explanation}</p>
+      `;
+      container.appendChild(block);
+    });
   }
 
   // Affiche la question courante
@@ -58,50 +84,98 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     const q = quizQuestions[currentIndex];
     // Nettoie l’espace des questions mais conserve le chronomètre
-    // On supprime tout sauf le timer
     const children = Array.from(container.children).filter(child => child.id !== 'timer');
     children.forEach(child => child.remove());
-    // Création des éléments de la question
+    // Création du conteneur de la question
     const questionEl = document.createElement('div');
     questionEl.className = 'question';
-    questionEl.textContent = `${currentIndex + 1}. ${q.question}`;
-    const optionsList = document.createElement('ul');
-    optionsList.className = 'options';
-    q.options.forEach((opt, idx) => {
-      const li = document.createElement('li');
-      const label = document.createElement('label');
-      const radio = document.createElement('input');
-      radio.type = 'radio';
-      radio.name = 'option';
-      radio.value = idx;
-      label.appendChild(radio);
-      label.appendChild(document.createTextNode(opt));
-      li.appendChild(label);
-      optionsList.appendChild(li);
-    });
-    // Bouton suivant / terminer
-    const isLast = currentIndex === quizQuestions.length - 1;
-    const btn = document.createElement('button');
-    btn.id = isLast ? 'finish-btn' : 'next-btn';
-    btn.textContent = isLast ? 'Terminer' : 'Suivant';
-    btn.addEventListener('click', () => {
-      // Vérifie la réponse sélectionnée
-      const selected = document.querySelector('input[name="option"]:checked');
-      if (!selected) {
-        alert('Veuillez sélectionner une réponse avant de continuer.');
-        return;
-      }
-      const selectedIndex = parseInt(selected.value, 10);
-      if (selectedIndex === q.answer) {
-        score++;
-      }
-      currentIndex++;
-      showQuestion();
-    });
-    // Ajout des éléments au conteneur
-    container.appendChild(questionEl);
-    container.appendChild(optionsList);
-    container.appendChild(btn);
+    questionEl.innerHTML = `${currentIndex + 1}. ${q.question}`;
+
+    if (mode === 'qcme') {
+      // QCM : préparer un tableau d’options avec indicateur de correction
+      const answerObjects = q.options.map((opt, idx) => ({ text: opt, isCorrect: idx === q.answer }));
+      const shuffled = shuffle(answerObjects);
+      const optionsList = document.createElement('ul');
+      optionsList.className = 'options';
+      shuffled.forEach((ansObj, idx) => {
+        const li = document.createElement('li');
+        const label = document.createElement('label');
+        const radio = document.createElement('input');
+        radio.type = 'radio';
+        radio.name = 'option';
+        radio.value = idx;
+        // Marque si c’est la bonne réponse
+        radio.dataset.correct = ansObj.isCorrect ? 'true' : 'false';
+        label.appendChild(radio);
+        label.appendChild(document.createTextNode(ansObj.text));
+        li.appendChild(label);
+        optionsList.appendChild(li);
+      });
+      // Bouton suivant / terminer
+      const isLast = currentIndex === quizQuestions.length - 1;
+      const btn = document.createElement('button');
+      btn.id = isLast ? 'finish-btn' : 'next-btn';
+      btn.textContent = isLast ? 'Terminer' : 'Suivant';
+      btn.addEventListener('click', () => {
+        // Vérifie la réponse sélectionnée
+        const selected = document.querySelector('input[name="option"]:checked');
+        if (!selected) {
+          alert('Veuillez sélectionner une réponse avant de continuer.');
+          return;
+        }
+        const isCorrect = selected.dataset.correct === 'true';
+        if (isCorrect) {
+          score++;
+        }
+        // Construire le résultat pour cette question
+        const selectedIndex = parseInt(selected.value, 10);
+        const selectedText = shuffled[selectedIndex].text;
+        const correctText = shuffled.find(ans => ans.isCorrect).text;
+        results.push({
+          question: q.question,
+          selected: selectedText,
+          correct: correctText,
+          explanation: q.explanation,
+          isCorrect
+        });
+        currentIndex++;
+        showQuestion();
+      });
+      // Ajout des éléments
+      container.appendChild(questionEl);
+      container.appendChild(optionsList);
+      container.appendChild(btn);
+    } else {
+      // Mode exercice théorique : proposer une zone de saisie libre
+      const textarea = document.createElement('textarea');
+      textarea.rows = 4;
+      textarea.placeholder = "Écrivez votre réponse ici...";
+      textarea.style.width = '100%';
+      textarea.style.marginTop = '0.5rem';
+      // Bouton suivant / terminer
+      const isLast = currentIndex === quizQuestions.length - 1;
+      const btn = document.createElement('button');
+      btn.id = isLast ? 'finish-btn' : 'next-btn';
+      btn.textContent = isLast ? 'Terminer' : 'Suivant';
+      btn.addEventListener('click', () => {
+        const userAnswer = textarea.value.trim();
+        // On ne corrige pas automatiquement les réponses théoriques
+        const correctText = q.options[q.answer];
+        results.push({
+          question: q.question,
+          selected: userAnswer,
+          correct: correctText,
+          explanation: q.explanation,
+          isCorrect: false
+        });
+        currentIndex++;
+        showQuestion();
+      });
+      // Ajout des éléments
+      container.appendChild(questionEl);
+      container.appendChild(textarea);
+      container.appendChild(btn);
+    }
   }
 
   // Démarre le chronomètre

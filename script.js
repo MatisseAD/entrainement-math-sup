@@ -8,8 +8,9 @@ document.addEventListener('DOMContentLoaded', () => {
       const subject = document.getElementById('subject').value;
       const difficulty = document.getElementById('difficulty').value;
       const time = document.getElementById('time').value;
+      const mode = document.getElementById('mode').value;
       // Redirige vers la page du quiz en passant les paramètres dans l’URL
-      const params = new URLSearchParams({ subject, difficulty, time });
+      const params = new URLSearchParams({ subject, difficulty, time, mode });
       window.location.href = `quiz.html?${params.toString()}`;
     });
   }
